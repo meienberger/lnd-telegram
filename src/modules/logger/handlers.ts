@@ -1,9 +1,9 @@
 import { getChannels } from 'lightning';
-import lnd from './lnd';
-import { Forward, EventTypes, Channel, ChainTransaction, Invoice } from '../types';
-import logger from '../config/logger/logger';
+import { Logger } from 'winston';
+import lnd from '../../core/lnd';
+import { Forward, EventTypes, Channel, ChainTransaction, Invoice } from '../../types';
 
-const logForwardEvent = async (forward: Forward) => {
+const logForwardEvent = async (forward: Forward, logger: Logger) => {
   try {
     if (forward.tokens) {
       const { channels } = await getChannels({ lnd });
@@ -38,7 +38,7 @@ const logForwardEvent = async (forward: Forward) => {
   }
 };
 
-const logChannelEvent = (channel: Channel, type: EventTypes.CHANNEL_CLOSED | EventTypes.CHANNEL_OPENED) => {
+const logChannelEvent = (channel: Channel, type: EventTypes.CHANNEL_CLOSED | EventTypes.CHANNEL_OPENED, logger: Logger) => {
   let title = '';
   let balance = '';
 
@@ -57,7 +57,7 @@ const logChannelEvent = (channel: Channel, type: EventTypes.CHANNEL_CLOSED | Eve
   logger.info(message);
 };
 
-const logTransactionEvent = (transaction: ChainTransaction) => {
+const logTransactionEvent = (transaction: ChainTransaction, logger: Logger) => {
   let message = '';
 
   if (!transaction.is_confirmed && transaction.is_outgoing) {
@@ -73,7 +73,7 @@ const logTransactionEvent = (transaction: ChainTransaction) => {
   }
 };
 
-const logInvoiceEvent = (invoice: Invoice) => {
+const logInvoiceEvent = (invoice: Invoice, logger: Logger) => {
   let message = '';
 
   if (!invoice.is_confirmed) {

@@ -1,5 +1,6 @@
 import initialChecks from './core/checks';
-import { initSubscriptions } from './core/subscriptions';
+import lnd from './core/lnd';
+import { channelSubscription, forwardSubscription, handleSubscriptonEvent, invoiceSubscription, transactionSubscription } from './modules/subscriptions';
 
 const main = async () => {
   try {
@@ -8,7 +9,10 @@ const main = async () => {
     console.error(error);
   }
 
-  initSubscriptions();
+  forwardSubscription(lnd, handleSubscriptonEvent);
+  channelSubscription(lnd, handleSubscriptonEvent);
+  transactionSubscription(lnd, handleSubscriptonEvent);
+  invoiceSubscription(lnd, handleSubscriptonEvent);
 };
 
 main();
