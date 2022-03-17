@@ -1,5 +1,6 @@
 import { getChannels } from 'lightning';
 import { Logger } from 'winston';
+import { INVOICE_CANCELED, INVOICE_CREATED_MESSAGE, INVOICE_PAID_MESSAGE } from '../../config/messages';
 import lnd from '../../core/lnd';
 import { Forward, EventTypes, Channel, ChainTransaction, Invoice } from '../../types';
 
@@ -74,22 +75,16 @@ const logTransactionEvent = (transaction: ChainTransaction, logger: Logger) => {
 };
 
 const logInvoiceEvent = (invoice: Invoice, logger: Logger) => {
-  let message = '';
-
   if (!invoice.is_confirmed) {
-    message = `🧾 *New invoice created*\n*Amount*: ${invoice.tokens?.toLocaleString('en-EN')}`;
+    logger.info(INVOICE_CREATED_MESSAGE);
   }
 
   if (invoice.is_confirmed) {
-    message = `✅ *Invoice has been paid*\n*Amount*: ${invoice.tokens?.toLocaleString('en-EN')}`;
+    logger.info(INVOICE_PAID_MESSAGE);
   }
 
   if (invoice.is_canceled) {
-    message = `❌ *Invoice canceled*\n*Amount*: ${invoice.tokens?.toLocaleString('en-EN')}`;
-  }
-
-  if (message) {
-    logger.info(message);
+    logger.info(INVOICE_CANCELED);
   }
 };
 
