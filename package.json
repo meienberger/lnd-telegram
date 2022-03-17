@@ -1,0 +1,45 @@
+{
+  "name": "lnd-telegram",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src/**/*.ts",
+    "build": "esbuild --bundle src/index.ts --outdir=dist --allow-overwrite --sourcemap --platform=node --minify --analyze=verbose --external:./node_modules/* --format=esm",
+    "build:watch": "esbuild --bundle src/index.ts --outdir=dist --allow-overwrite --sourcemap --platform=node --external:./node_modules/* --format=esm --watch",
+    "start:dev": "NODE_ENV=development nodemon --trace-deprecation --trace-warnings --watch dist dist/index.js",
+    "dev": "concurrently \"yarn build:watch\" \"yarn start:dev\"",
+    "start": "node dist/index.js",
+    "build:docker": "docker buildx build -t meienberger/lnd-telegram .",
+    "run:docker": "docker run -d --env-file ./.env --name telegram meienberger/lnd-telegram",
+    "push:docker": "docker image push --all-tags meienberger/lnd-telegram"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "lightning": "^5.8.3",
+    "winston": "^3.6.0",
+    "winston-telegram": "^2.5.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.14.0",
+    "concurrently": "^7.0.0",
+    "esbuild": "^0.14.27",
+    "eslint": "^8.10.0",
+    "eslint-config-airbnb-typescript": "^16.1.1",
+    "eslint-config-hardcore": "^24.3.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-deprecate": "^0.7.0",
+    "eslint-plugin-no-loops": "^0.3.0",
+    "eslint-plugin-no-secrets": "^0.8.9",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-sonarjs": "^0.12.0",
+    "eslint-plugin-unicorn": "^41.0.0",
+    "lerna": "^4.0.0",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.6.2"
+  }
+}
