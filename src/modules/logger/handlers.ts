@@ -1,61 +1,49 @@
-import { getChannels } from 'lightning';
+/* eslint-disable @typescript-eslint/naming-convention */
 import { Logger } from 'winston';
-import { INVOICE_CANCELED, INVOICE_CREATED_MESSAGE, INVOICE_PAID_MESSAGE } from '../../config/messages';
+import { FORWARD_FAILED, INVOICE_CANCELED, INVOICE_CREATED_MESSAGE, INVOICE_PAID_MESSAGE, CHANNEL_OPENED, CHANNEL_CLOSED } from '../../config/messages';
 import lnd from '../../core/lnd';
 import { Forward, EventTypes, Channel, ChainTransaction, Invoice } from '../../types';
+import { getChannelNames } from '../helpers/message-helpers';
 
 const logForwardEvent = async (forward: Forward, logger: Logger) => {
-  try {
-    if (forward.tokens) {
-      const { channels } = await getChannels({ lnd });
+  if (forward.tokens && !forward.is_send) {
+    const { fee, tokens, is_failed, internal_failure, in_channel, out_channel } = forward;
+    const { in: inc, out: outc } = await getChannelNames(in_channel, out_channel, lnd);
+    const failure = internal_failure?.replace(/_/gu, ' ');
 
-      const inChannel = channels.find(channel => channel.id === forward.in_channel)?.partner_public_key;
-      const outChannel = channels.find(channel => channel.id === forward.out_channel)?.partner_public_key;
-
-      let title = '🔀 *New Forward event*';
-      let failure = '';
-
-      if (forward.is_failed) {
-        title = '❌ *Failed Forward event*';
-        failure = `\n*Failure*: ${forward.internal_failure?.replace(/_/gu, ' ')}`;
-      }
-
-      if (forward.is_receive) {
-        title = '⏮ *Received Forward event*';
-      }
-
-      if (forward.is_send) {
-        title = '📤 *Sent payment*';
-      }
-
-      const message = `${title}\n*In Channel*: ${inChannel?.slice(0, 8)}\n*Out Channel*: ${outChannel?.slice(0, 8)}\n*Tokens*: ${forward.tokens?.toLocaleString(
-        'en-EN',
-      )}\n*Fee*: ${forward.fee?.toLocaleString('en-EN')}${failure}`;
+    if (is_failed) {
+      const message = FORWARD_FAILED({ tokens, fee, inc, outc, failure });
 
       logger.info(message);
     }
-  } catch (error) {
-    console.error(error);
+
+    // TODO: Other events
+
+    // if (forward.is_receive) {
+    //   title = '⏮ *Received Forward event*';
+    // }
+
+    // let title = '🔀 *New Forward event*';
   }
 };
 
-const logChannelEvent = (channel: Channel, type: EventTypes.CHANNEL_CLOSED | EventTypes.CHANNEL_OPENED, logger: Logger) => {
-  let title = '';
-  let balance = '';
+const logChannelEvent = async (channel: Channel, type: EventTypes.CHANNEL_CLOSED | EventTypes.CHANNEL_OPENED, logger: Logger) => {
+  const { in: inc } = await getChannelNames(channel.partner_public_key, channel.partner_public_key, lnd);
+  const capacity = channel.capacity?.toLocaleString('en-EN');
 
   if (type === EventTypes.CHANNEL_CLOSED) {
-    title = '🔔 *Channel closed*';
-    balance = `\n*Final Balance*: ${channel.final_local_balance?.toLocaleString('en-EN')}`;
+    const balance = channel.final_local_balance?.toLocaleString('en-EN');
+    const message = CHANNEL_CLOSED(inc, capacity, balance);
+
+    logger.info(message);
   }
 
   if (type === EventTypes.CHANNEL_OPENED) {
-    title = '🔔 *Channel opened*';
-    balance = `\n*Balance*: ${channel.local_balance?.toLocaleString('en-EN')}`;
+    const balance = channel.local_balance?.toLocaleString('en-EN');
+    const message = CHANNEL_OPENED(inc, capacity, balance);
+
+    logger.info(message);
   }
-
-  const message = `${title}\n*Partner*: ${channel.partner_public_key?.slice(0, 8)}\n*Capacity*: ${channel.capacity?.toLocaleString('en-EN')}${balance}`;
-
-  logger.info(message);
 };
 
 const logTransactionEvent = (transaction: ChainTransaction, logger: Logger) => {
@@ -76,15 +64,15 @@ const logTransactionEvent = (transaction: ChainTransaction, logger: Logger) => {
 
 const logInvoiceEvent = (invoice: Invoice, logger: Logger) => {
   if (!invoice.is_confirmed) {
-    logger.info(INVOICE_CREATED_MESSAGE);
+    logger.info(INVOICE_CREATED_MESSAGE(invoice.tokens));
   }
 
   if (invoice.is_confirmed) {
-    logger.info(INVOICE_PAID_MESSAGE);
+    logger.info(INVOICE_PAID_MESSAGE(invoice.tokens));
   }
 
   if (invoice.is_canceled) {
-    logger.info(INVOICE_CANCELED);
+    logger.info(INVOICE_CANCELED(invoice.tokens));
   }
 };
 
