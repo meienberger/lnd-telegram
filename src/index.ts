@@ -1,14 +1,18 @@
 import initialChecks from './core/checks';
-import { initSubscriptions } from './core/subscriptions';
+import lnd from './core/lnd';
+import { channelSubscription, forwardSubscription, handleSubscriptonEvent, invoiceSubscription, transactionSubscription } from './modules/subscriptions';
 
 const main = async () => {
   try {
     await initialChecks();
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error('⚠️ Unable to connect to LND instance');
   }
 
-  initSubscriptions();
+  forwardSubscription(lnd, handleSubscriptonEvent);
+  channelSubscription(lnd, handleSubscriptonEvent);
+  transactionSubscription(lnd, handleSubscriptonEvent);
+  invoiceSubscription(lnd, handleSubscriptonEvent);
 };
 
 main();

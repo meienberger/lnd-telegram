@@ -1,6 +1,6 @@
 import { createLogger } from 'winston';
 import TelegramLogger, { FormatOptions } from 'winston-telegram';
-import config from '..';
+import config from '../../config';
 
 const telegramFormat = (options: FormatOptions) => {
   return options.message;
@@ -21,4 +21,4 @@ telegramLogger.add(
   }),
 );
 
-export default telegramLogger;
+export { telegramLogger };
