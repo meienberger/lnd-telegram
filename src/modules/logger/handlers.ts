@@ -1,13 +1,24 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Logger } from 'winston';
-import { FORWARD_FAILED, INVOICE_CANCELED, INVOICE_CREATED_MESSAGE, INVOICE_PAID_MESSAGE, CHANNEL_OPENED, CHANNEL_CLOSED } from '../../config/messages';
+import {
+  FORWARD_FAILED,
+  INVOICE_CANCELED,
+  INVOICE_CREATED_MESSAGE,
+  INVOICE_PAID_MESSAGE,
+  CHANNEL_OPENED,
+  CHANNEL_CLOSED,
+  FORWARD_SUCCESS,
+  CHAIN_OUTGOING,
+  CHAIN_CONFIRMED,
+  CHAIN_INCOMING,
+} from '../../config/messages';
 import lnd from '../../core/lnd';
 import { Forward, EventTypes, Channel, ChainTransaction, Invoice } from '../../types';
 import { getChannelNames } from '../helpers/message-helpers';
 
 const logForwardEvent = async (forward: Forward, logger: Logger) => {
   if (forward.tokens && !forward.is_send) {
-    const { fee, tokens, is_failed, internal_failure, in_channel, out_channel } = forward;
+    const { fee, tokens, is_failed, internal_failure, in_channel, out_channel, is_receive, is_send } = forward;
     const { in: inc, out: outc } = await getChannelNames(in_channel, out_channel, lnd);
     const failure = internal_failure?.replace(/_/gu, ' ');
 
@@ -17,47 +28,52 @@ const logForwardEvent = async (forward: Forward, logger: Logger) => {
       logger.info(message);
     }
 
-    // TODO: Other events
+    if (!is_failed && !is_receive && !is_send) {
+      const message = FORWARD_SUCCESS({ tokens, fee, inc, outc });
 
-    // if (forward.is_receive) {
-    //   title = '⏮ *Received Forward event*';
-    // }
-
-    // let title = '🔀 *New Forward event*';
+      logger.info(message);
+    }
   }
 };
 
-const logChannelEvent = async (channel: Channel, type: EventTypes.CHANNEL_CLOSED | EventTypes.CHANNEL_OPENED, logger: Logger) => {
-  const { in: inc } = await getChannelNames(channel.partner_public_key, channel.partner_public_key, lnd);
-  const capacity = channel.capacity?.toLocaleString('en-EN');
+const logChannelEvent = (channel: Channel, type: EventTypes.CHANNEL_CLOSED | EventTypes.CHANNEL_OPENED, logger: Logger) => {
+  try {
+    const capacity = channel.capacity?.toLocaleString('en-EN');
 
-  if (type === EventTypes.CHANNEL_CLOSED) {
-    const balance = channel.final_local_balance?.toLocaleString('en-EN');
-    const message = CHANNEL_CLOSED(inc, capacity, balance);
+    if (type === EventTypes.CHANNEL_CLOSED) {
+      const balance = channel.final_local_balance?.toLocaleString('en-EN');
+      const message = CHANNEL_CLOSED(channel.partner_public_key.slice(0, 8), capacity, balance);
 
-    logger.info(message);
-  }
+      logger.info(message);
+    }
 
-  if (type === EventTypes.CHANNEL_OPENED) {
-    const balance = channel.local_balance?.toLocaleString('en-EN');
-    const message = CHANNEL_OPENED(inc, capacity, balance);
+    if (type === EventTypes.CHANNEL_OPENED) {
+      const balance = channel.local_balance?.toLocaleString('en-EN');
+      const message = CHANNEL_OPENED(channel.partner_public_key.slice(0, 8), capacity, balance);
 
-    logger.info(message);
+      logger.info(message);
+    }
+  } catch (error) {
+    console.error(error);
   }
 };
 
 const logTransactionEvent = (transaction: ChainTransaction, logger: Logger) => {
-  let message = '';
-
   if (!transaction.is_confirmed && transaction.is_outgoing) {
-    message = `🕚 *New outgoing chain transaction*\n*Amount*: ${transaction.tokens?.toLocaleString('en-EN')}\n[See in explorer](https://mempool.space/tx/${transaction.id})`;
+    const message = CHAIN_OUTGOING(transaction.tokens.toLocaleString('en-EN'), transaction.id);
+
+    logger.info(message);
   }
 
-  if (transaction.is_confirmed && transaction.is_outgoing) {
-    message = `✅ *Transaction confirmed*\n*Amount*: ${transaction.tokens?.toLocaleString('en-EN')}\n[See in explorer](https://mempool.space/tx/${transaction.id})`;
+  if (!transaction.is_confirmed && !transaction.is_outgoing) {
+    const message = CHAIN_INCOMING(transaction.tokens.toLocaleString('en-EN'), transaction.id);
+
+    logger.info(message);
   }
 
-  if (message) {
+  if (transaction.is_confirmed) {
+    const message = CHAIN_CONFIRMED(transaction.tokens.toLocaleString('en-EN'), transaction.id);
+
     logger.info(message);
   }
 };

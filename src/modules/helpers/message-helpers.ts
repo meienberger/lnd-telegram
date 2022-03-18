@@ -15,4 +15,10 @@ const getChannelNames = async (inId: string, outId: string, lnd: AuthenticatedLn
   };
 };
 
-export { getChannelNames };
+const getChannelNameFromPublicKey = async (publicKey: string, lnd: AuthenticatedLnd) => {
+  const node = await getNode({ lnd, public_key: publicKey, is_omitting_channels: true });
+
+  return node.alias || publicKey.slice(0, 8);
+};
+
+export { getChannelNames, getChannelNameFromPublicKey };

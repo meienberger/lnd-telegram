@@ -5,7 +5,7 @@ import { channelSubscription, forwardSubscription, handleSubscriptonEvent, invoi
 const main = async () => {
   try {
     await initialChecks();
-  } catch (_) {
+  } catch {
     console.error('⚠️ Unable to connect to LND instance');
   }
 

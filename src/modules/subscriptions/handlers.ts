@@ -8,7 +8,8 @@ const handleSubscriptonEvent = (type: EventTypes, data: unknown) => {
       logForwardEvent(data as Forward, telegramLogger);
 
       break;
-    case EventTypes.CHANNEL_CLOSED || EventTypes.CHANNEL_OPENED:
+    case EventTypes.CHANNEL_CLOSED:
+    case EventTypes.CHANNEL_OPENED:
       logChannelEvent(data as Channel, type, telegramLogger);
 
       break;
@@ -22,6 +23,8 @@ const handleSubscriptonEvent = (type: EventTypes, data: unknown) => {
       break;
 
     default:
+      console.error('Jumped to default case');
+
       break;
   }
 };
